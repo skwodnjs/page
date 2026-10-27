@@ -26,6 +26,7 @@ VITE_OWNER_UID=
 4. Cloudflare Worker Builds에서도 빌드 환경변수 `VITE_OWNER_EMAIL`을 **동일하게 설정하고 재배포**합니다. `VITE_*` 값은 클라이언트 번들에 포함되므로 비밀번호나 서비스 계정 키를 입력하지 않습니다.
 5. Firebase Authentication > Settings > Authorized domains에 실제 웹사이트 도메인을 등록합니다.
 6. 앱 잠금 화면의 **최초 설정 · 비밀번호 재설정 (Google)**을 눌러 위 이메일의 Google 계정으로 인증한 후 **10자 이상의 비밀번호**를 등록합니다. 처음에는 기존 Email/Password Firebase 사용자를 별도로 만들지 마세요. Google Firebase 계정에 비밀번호 인증을 연결하므로 UID가 유지됩니다.
+   - 이메일 주소 열거 방지가 켜진 새 Firebase 프로젝트에서도 동작하도록 SDK의 `linkWithCredential()`이 아닌 **`accounts:signUp` REST API + Google 사용자의 ID 토큰**으로 같은 UID에 이메일/비밀번호를 연결합니다. 이 보안 설정을 해제하지 마세요.
 7. 이후에는 **비밀번호만 입력**하면 됩니다. 로그아웃은 화면 상단 잠금 버튼. Firebase Auth는 `browserSessionPersistence`를 사용해 탭/창 세션이 끝나면 해제됩니다. Google 계정을 사용한 비밀번호 재설정 후 다시 비밀번호로 잠금 해제해야 합니다.
 
 ### 필수: Firestore 보안 규칙 배포
