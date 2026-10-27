@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // IMPORTANT: Replace the placeholder with the UID shown in
+    // Firebase Console > Authentication > Users, then publish these rules.
+    // Until it is replaced, all Firestore access remains denied.
+    function isOwner(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && request.auth.uid == 'REPLACE_WITH_OWNER_UID';
+    }
+
+    match /users/{userId}/datedNotes/{dateId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId}/generalNotes/{noteId} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}
