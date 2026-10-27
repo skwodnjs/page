@@ -55,7 +55,7 @@ function useCloudMemo(uid){
     timers.current[key]=setTimeout(()=>flush(key),delay);
   },[persistDrafts,flush]);
   useEffect(()=>{
-    let alive=true,finished=0;
+    let alive=true;let datedSeen=false,notesSeen=false;
     try{
       const stored=JSON.parse(localStorage.getItem(draftKey(uid))||'{}');
       drafts.current=stored&&typeof stored==='object'&&!Array.isArray(stored)?stored:{};
@@ -63,7 +63,7 @@ function useCloudMemo(uid){
     }catch{drafts.current={}}
     const datePath=collection(db,'users',uid,'datedNotes');
     const notesPath=collection(db,'users',uid,'generalNotes');
-    const onLoaded=()=>{finished++;if(finished===2&&alive)setLoading(false)};
+    const onLoaded=kind=>{if(kind==='dated')datedSeen=true;else notesSeen=true;if(datedSeen&&notesSeen&&alive)setLoading(false)};
     const unsubs=[
       onSnapshot(datePath,snap=>{
         if(!alive)return;
@@ -71,7 +71,7 @@ function useCloudMemo(uid){
         snap.docs.forEach(d=>{const data=d.data();if(typeof data.content==='string'&&data.content.trim())server[d.id]=data.content});
         for(const pending of Object.values(drafts.current))if(pending.type==='dated'){if(pending.deleted||!pending.content?.trim())delete server[pending.id];else server[pending.id]=pending.content}
         setDated(server);
-        if(finished<2)onLoaded();
+        onLoaded('dated');
       },err=>{if(alive){setLoadError(err.message);setLoading(false)}}),
       onSnapshot(notesPath,snap=>{
         if(!alive)return;
@@ -79,7 +79,7 @@ function useCloudMemo(uid){
         const map=new Map(server.map(n=>[n.id,n]));
         for(const pending of Object.values(drafts.current))if(pending.type==='general'){if(pending.deleted)map.delete(pending.id);else map.set(pending.id,{id:pending.id,title:pending.title||'',body:pending.body||'',updated:'오늘'})}
         setNotes([...map.values()].sort((a,b)=>String(b.id).localeCompare(String(a.id))));
-        if(finished<2)onLoaded();
+        onLoaded('notes');
       },err=>{if(alive){setLoadError(err.message);setLoading(false)}})
     ];
     Object.keys(drafts.current).forEach(key=>{timers.current[key]=setTimeout(()=>flush(key),2000)});
@@ -88,12 +88,6 @@ function useCloudMemo(uid){
   const editDated=(date,content)=>{
     setDated(all=>{const next={...all};if(content.trim())next[date]=content;else delete next[date];return next});
     queue({type:'dated',id:date,content,deleted:!content.trim()});
-  };
-  const editNote=(id,changes)=>{
-    let data=null;
-    setNotes(current=>current.map(n=>{if(n.id!==id)return n;data={...n,...changes,updated:'오늘'};return data}));
-    // All edits are called from current React UI events, with a defined source note.
-    return data;
   };
   const saveNote=(note)=>{setNotes(ns=>ns.map(n=>n.id===note.id?{...note,updated:'오늘'}:n));queue({type:'general',id:String(note.id),title:note.title||'',body:note.body||''})};
   const createNote=()=>{
@@ -108,7 +102,7 @@ function useCloudMemo(uid){
     queue({type:'general',id:String(id),deleted:true},0);
   };
   const retry=key=>{if(drafts.current[key]){status(key,'pending');clearTimeout(timers.current[key]);timers.current[key]=setTimeout(()=>flush(key),0)}};
-  return{dated,notes,loading,loadError,statuses,editDated,editNote,saveNote,createNote,removeNote,retry};
+  return{dated,notes,loading,loadError,statuses,editDated,saveNote,createNote,removeNote,retry};
 }
 function SaveState({state,onRetry}){
   if(state==='error')return <button type="button" className="memo-sync-error" onClick={onRetry}><AlertCircle size={14}/> 저장 실패 · 재시도</button>;
