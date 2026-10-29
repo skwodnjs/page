@@ -28,3 +28,24 @@
 .daily-edit-actions button.daily-edit-remove:hover{text-decoration:underline}
 @media(hover:none){.daily-time-edit-trigger{opacity:1}}
 @media(max-width:400px){.daily-time-editable{gap:2px}.daily-time-edit-trigger{width:16px}.daily-time-edit-trigger svg{width:11px}.daily-edit-dialog{padding:20px}}
+
+/* Cloud-backed daily records: unobtrusive editing, sync status, and timeline form. */
+.daily-loading{display:flex;align-items:center;justify-content:center;gap:11px;min-height:210px;font-size:13px;color:var(--secondary);line-height:1.7;flex-wrap:wrap;padding:24px;text-align:center}
+.daily-loading-error{color:#c55c5c}
+.daily-topline{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.daily-sync-status{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--secondary);font-size:11px;min-height:22px}
+.daily-save-error{display:flex;align-items:center;gap:8px;font-size:12px;color:#c55c5c;line-height:1.6;margin:-8px 0 15px}
+.daily-timeline-tools{display:flex;align-items:center;gap:12px}
+.daily-timeline-tools button{display:inline-flex;align-items:center;gap:4px;padding:4px 0;border:0;background:transparent;color:var(--secondary);font:inherit;font-size:11px;cursor:pointer}
+.daily-timeline-tools button:hover{color:var(--text)}
+.daily-timeline-tools button:disabled,.daily-attendance-action:disabled,.daily-time-edit-trigger:disabled{opacity:.5;cursor:default}
+.daily-timeline-controls{display:flex;align-items:center;gap:7px}
+.daily-timeline-controls button{width:23px;height:23px;display:inline-flex;align-items:center;justify-content:center;flex:none;border:0;border-radius:5px;background:transparent;color:var(--tertiary);cursor:pointer}
+.daily-timeline-controls button:hover,.daily-timeline-controls button:focus-visible{color:var(--text);background:var(--hover)}
+.daily-edit-dialog input[type=text],.daily-edit-dialog select,.daily-edit-dialog textarea{box-sizing:border-box;width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;resize:vertical}
+.daily-edit-time-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.daily-edit-time-grid label{min-width:0;display:flex;flex-direction:column;gap:7px;color:var(--secondary);font-size:12px}
+.daily-edit-time-grid input[type=datetime-local]{font-size:12px;min-width:0;padding:9px 7px}
+.daily-edit-actions button.daily-edit-remove{display:inline-flex;align-items:center;gap:5px}
+.daily-edit-actions button:disabled{opacity:.5;cursor:default}
+@media(max-width:420px){.daily-edit-time-grid{grid-template-columns:1fr}.daily-topline{align-items:flex-start}.daily-sync-status{font-size:10px}}
