@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="J. logo">
-  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="12" fill="#e8e8e6" stroke="#cecfcd" stroke-width="1.5"/>
+  <rect x="0" y="0" width="64" height="64" rx="12" fill="#e5e5e5"/>
   <g transform="translate(12 51) scale(0.0255 -0.0255)">
     <path d="M546 -22C855 -22 1044 145 1044 445V1490H736V449C736 312 662 237 543 237C423 237 349 312 349 449V552H59V451C59 147 244 -22 546 -22Z" fill="#252b31"/>
-    <path d="M250 -18C345 -18 420 57 420 152C420 246 345 322 250 322C156 322 81 246 81 152C81 57 156 -18 250 -18Z" transform="translate(1151 0)" fill="#8b8f92"/>
+    <path d="M250 -18C345 -18 420 57 420 152C420 246 345 322 250 322C156 322 81 246 81 152C81 57 156 -18 250 -18Z" transform="translate(1151 0)" fill="#898989"/>
   </g>
 </svg>
