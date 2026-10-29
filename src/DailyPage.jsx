@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react';
-import {CalendarDays,ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,NotebookPen} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,NotebookPen,Pencil} from 'lucide-react';
 import './daily.css';
 
 // Initial display records; attendance changes live only in React memory (no persistence).
@@ -145,6 +145,7 @@ export default function DailyPage(){
   const [today,setToday]=useState(()=>toKey(new Date()));
   const [selected,setSelected]=useState(()=>toKey(new Date()));
   const [records,setRecords]=useState(initialRecords);
+  const [editing,setEditing]=useState(null);
   useEffect(()=>{
     const updateToday=()=>setToday(toKey(new Date()));
     const timer=setInterval(updateToday,30000);
@@ -175,6 +176,59 @@ export default function DailyPage(){
     });
   };
   const checkoutOffset=record?.checkoutDayOffset??(record?.checkoutNextDay?1:0);
+  const chooseDate=key=>{setEditing(null);setSelected(key)};
+  const startEdit=field=>{
+    const time=record?.[field];
+    const date=field==='checkIn'?selected:shiftDate(selected,checkoutOffset);
+    setEditing({field,value:time?date+'T'+time:'',error:''});
+  };
+  const saveEdit=event=>{
+    event.preventDefault();
+    if(!editing)return;
+    const value=editing.value;
+    const date=new Date(value);
+    if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/.test(value)||Number.isNaN(date.getTime())||
+       toKey(date)+'T'+timeOf(date)!==value){
+      setEditing(e=>({...e,error:'날짜와 시간을 정확히 입력해 주세요.'}));return;
+    }
+    const dayOffset=offsetFromDay(selected,date);
+    if((editing.field==='checkIn'&&dayOffset!==0)||
+       (editing.field==='checkOut'&&(dayOffset<0||dayOffset>1))){
+      setEditing(e=>({...e,error:editing.field==='checkIn'?'출근은 선택한 날짜에만 설정할 수 있습니다.':'퇴근은 당일 또는 다음 날로 설정해 주세요.'}));return;
+    }
+    const existing=records[selected]||{timeline:[]};
+    const checkInDate=editing.field==='checkIn'?date:existing.checkInAt?new Date(existing.checkInAt):existing.checkIn?new Date(selected+'T'+existing.checkIn):null;
+    const checkOutDate=editing.field==='checkOut'?date:existing.checkOutAt?new Date(existing.checkOutAt):existing.checkOut?new Date(shiftDate(selected,checkoutOffset)+'T'+existing.checkOut):null;
+    if(editing.field==='checkOut'&&!checkInDate){
+      setEditing(e=>({...e,error:'퇴근 시간을 입력하려면 출근 시간을 먼저 기록해 주세요.'}));return;
+    }
+    if(checkInDate&&checkOutDate&&checkOutDate<=checkInDate){
+      setEditing(e=>({...e,error:'퇴근 시간은 출근 시간보다 늦어야 합니다.'}));return;
+    }
+    const updated={...existing,[editing.field]:timeOf(date),[editing.field+'At']:date.toISOString()};
+    if(editing.field==='checkOut'){
+      updated.checkoutDayOffset=dayOffset;
+      updated.checkoutNextDay=dayOffset===1;
+    }
+    setRecords(previous=>({...previous,[selected]:updated}));
+    setEditing(null);
+  };
+  const clearEdit=()=>{
+    if(!editing)return;
+    const field=editing.field;
+    if(field==='checkIn'&&record?.checkOut&&!window.confirm('출근 시간을 삭제하면 퇴근 시간도 함께 삭제됩니다. 계속할까요?'))return;
+    const updated={...(records[selected]||{timeline:[]})};
+    updated[field]=null;
+    updated[field+'At']=null;
+    if(field==='checkIn'){
+      updated.checkOut=null;updated.checkOutAt=null;
+    }
+    if(field==='checkOut'||field==='checkIn'){
+      updated.checkoutDayOffset=0;updated.checkoutNextDay=false;
+    }
+    setRecords(previous=>({...previous,[selected]:updated}));
+    setEditing(null);
+  };
   const timeline=record?.timeline||[];
   const monthly=useMemo(()=>{
     const prefix=selected.slice(0,7);
@@ -190,7 +244,7 @@ export default function DailyPage(){
     const next=new Date(month.getFullYear(),month.getMonth()+step,1);
     const prefix=next.getFullYear()+'-'+pad(next.getMonth()+1);
     const available=Object.keys(records).filter(key=>key.startsWith(prefix)).sort();
-    setSelected(available.at(-1)||prefix+'-01');
+    chooseDate(available.at(-1)||prefix+'-01');
   };
   return <div className="daily-page">
     <div className="section-head daily-section-head"><div><div className="eyebrow">DAILY</div><h1>일상</h1></div></div>
@@ -209,24 +263,43 @@ export default function DailyPage(){
             <button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button>
           </div>
         </div>
-        <MonthCalendar month={month} selected={selected} onSelect={setSelected} records={records}/>
+        <MonthCalendar month={month} selected={selected} onSelect={chooseDate} records={records}/>
       </section>
       <section className="daily-day-card">
         <div className="daily-day-head">
           <div className="daily-day-heading"><span>선택한 날짜</span><h3>{prettyDate(selected)}</h3></div>
           <div className="daily-nav-controls">
-            <button type="button" onClick={()=>setSelected(d=>shiftDate(d,-1))} aria-label="이전 날짜"><ChevronLeft size={18}/></button>
-            <button type="button" onClick={()=>setSelected(d=>shiftDate(d,1))} aria-label="다음 날짜"><ChevronRight size={18}/></button>
+            <button type="button" onClick={()=>chooseDate(shiftDate(selected,-1))} aria-label="이전 날짜"><ChevronLeft size={18}/></button>
+            <button type="button" onClick={()=>chooseDate(shiftDate(selected,1))} aria-label="다음 날짜"><ChevronRight size={18}/></button>
           </div>
         </div>
         <div className="daily-attendance">
-          <div><span><LogIn size={14}/> 출근 시간</span>{record?.checkIn?<strong>{record.checkIn}</strong>:canCheckIn?<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>:<strong>—</strong>}</div>
-          <div><span><LogOut size={14}/> 퇴근 시간</span>{record?.checkOut?<strong>{record.checkOut}{checkoutOffset>0&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong>:canCheckOut?<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>:<strong>—</strong>}</div>
+          <div><span><LogIn size={14}/> 출근 시간</span>{canCheckIn?<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={()=>startEdit('checkIn')} title="더블클릭하여 시간 수정">{record?.checkIn||'—'}</strong><button type="button" className="daily-time-edit-trigger" aria-label="출근 시간 수정" title="출근 시간 수정" onClick={()=>startEdit('checkIn')}><Pencil size={12}/></button></div>}</div>
+          <div><span><LogOut size={14}/> 퇴근 시간</span>{canCheckOut?<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={()=>startEdit('checkOut')} title="더블클릭하여 시간 수정">{record?.checkOut||'—'}{checkoutOffset>0&&record?.checkOut&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong><button type="button" className="daily-time-edit-trigger" aria-label="퇴근 시간 수정" title="퇴근 시간 수정" onClick={()=>startEdit('checkOut')}><Pencil size={12}/></button></div>}</div>
           <div><span><Clock3 size={14}/> 총 근무 시간</span><strong>{hours(durationFor(record))}</strong></div>
         </div>
         <div className="daily-timeline-head"><h3>타임라인</h3><span>{timeline.length}개 기록</span></div>
         <Timeline events={timeline}/>
       </section>
     </div>
+    {editing&&<div className="daily-edit-overlay" onMouseDown={event=>{if(event.target===event.currentTarget)setEditing(null)}} onKeyDown={event=>{if(event.key==='Escape')setEditing(null)}}>
+      <form className="daily-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="daily-edit-title" onSubmit={saveEdit}>
+        <div className="daily-edit-heading">
+          <span>{prettyDate(selected)}</span>
+          <h3 id="daily-edit-title">{editing.field==='checkIn'?'출근':'퇴근'} 시간 {record?.[editing.field]?'수정':'입력'}</h3>
+        </div>
+        <label className="daily-edit-label" htmlFor="daily-edit-time">날짜 및 시간</label>
+        <input id="daily-edit-time" type="datetime-local" required autoFocus value={editing.value}
+          min={selected+'T00:00'} max={(editing.field==='checkIn'?selected:shiftDate(selected,1))+'T23:59'}
+          onChange={event=>setEditing(e=>({...e,value:event.target.value,error:''}))}/>
+        {editing.field==='checkOut'&&<p className="daily-edit-hint">다음 날 퇴근한 경우 날짜를 다음 날로 선택하세요.</p>}
+        {editing.error&&<p className="daily-edit-error" role="alert">{editing.error}</p>}
+        <div className="daily-edit-actions">
+          {record?.[editing.field]&&<button type="button" className="daily-edit-remove" onClick={clearEdit}>기록 삭제</button>}
+          <button type="button" className="daily-edit-cancel" onClick={()=>setEditing(null)}>취소</button>
+          <button type="submit" className="daily-edit-save">확인</button>
+        </div>
+      </form>
+    </div>}
   </div>;
 }
