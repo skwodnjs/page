@@ -16,5 +16,9 @@ service cloud.firestore {
     match /users/{userId}/generalNotes/{noteId} {
       allow read, write: if isOwner(userId);
     }
+    // Day document ID: YYYY-MM-DD. Includes check-in/out and timeline entries.
+    match /users/{userId}/dailyRecords/{dateId} {
+      allow read, write: if isOwner(userId);
+    }
   }
 }
