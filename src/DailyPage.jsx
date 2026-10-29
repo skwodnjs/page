@@ -220,8 +220,8 @@ export default function DailyPage(){
           </div>
         </div>
         <div className="daily-attendance">
-          <div><span><LogIn size={14}/> 출근 시간</span><strong>{record?.checkIn||'—'}</strong>{canCheckIn&&<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>}</div>
-          <div><span><LogOut size={14}/> 퇴근 시간</span><strong>{record?.checkOut||'—'}{checkoutOffset>0&&record?.checkOut&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong>{canCheckOut&&<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>}</div>
+          <div><span><LogIn size={14}/> 출근 시간</span>{record?.checkIn?<strong>{record.checkIn}</strong>:canCheckIn?<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>:<strong>—</strong>}</div>
+          <div><span><LogOut size={14}/> 퇴근 시간</span>{record?.checkOut?<strong>{record.checkOut}{checkoutOffset>0&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong>:canCheckOut?<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>:<strong>—</strong>}</div>
           <div><span><Clock3 size={14}/> 총 근무 시간</span><strong>{hours(durationFor(record))}</strong></div>
         </div>
         <div className="daily-timeline-head"><h3>타임라인</h3><span>{timeline.length}개 기록</span></div>
