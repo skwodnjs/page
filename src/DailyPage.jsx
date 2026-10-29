@@ -156,6 +156,7 @@ export default function DailyPage(){
   const record=records[selected];
   const canCheckIn=selected===today&&!record?.checkIn;
   const canCheckOut=Boolean(record?.checkIn&&!record?.checkOut);
+  const canEdit=selected<=today;
   const checkIn=()=>{
     const now=new Date();
     if(selected!==toKey(now))return;
@@ -178,6 +179,7 @@ export default function DailyPage(){
   const checkoutOffset=record?.checkoutDayOffset??(record?.checkoutNextDay?1:0);
   const chooseDate=key=>{setEditing(null);setSelected(key)};
   const startEdit=field=>{
+    if(selected>toKey(new Date()))return;
     const time=record?.[field];
     const date=field==='checkIn'?selected:shiftDate(selected,checkoutOffset);
     setEditing({field,value:time?date+'T'+time:'',error:''});
@@ -274,8 +276,8 @@ export default function DailyPage(){
           </div>
         </div>
         <div className="daily-attendance">
-          <div><span><LogIn size={14}/> 출근 시간</span>{canCheckIn?<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={()=>startEdit('checkIn')} title="더블클릭하여 시간 수정">{record?.checkIn||'—'}</strong><button type="button" className="daily-time-edit-trigger" aria-label="출근 시간 수정" title="출근 시간 수정" onClick={()=>startEdit('checkIn')}><Pencil size={12}/></button></div>}</div>
-          <div><span><LogOut size={14}/> 퇴근 시간</span>{canCheckOut?<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={()=>startEdit('checkOut')} title="더블클릭하여 시간 수정">{record?.checkOut||'—'}{checkoutOffset>0&&record?.checkOut&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong><button type="button" className="daily-time-edit-trigger" aria-label="퇴근 시간 수정" title="퇴근 시간 수정" onClick={()=>startEdit('checkOut')}><Pencil size={12}/></button></div>}</div>
+          <div><span><LogIn size={14}/> 출근 시간</span>{canCheckIn?<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={canEdit?()=>startEdit('checkIn'):undefined} title={canEdit?'더블클릭하여 시간 수정':undefined}>{record?.checkIn||'—'}</strong>{canEdit&&<button type="button" className="daily-time-edit-trigger" aria-label="출근 시간 수정" title="출근 시간 수정" onClick={()=>startEdit('checkIn')}><Pencil size={12}/></button>}</div>}</div>
+          <div><span><LogOut size={14}/> 퇴근 시간</span>{canCheckOut?<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={canEdit?()=>startEdit('checkOut'):undefined} title={canEdit?'더블클릭하여 시간 수정':undefined}>{record?.checkOut||'—'}{checkoutOffset>0&&record?.checkOut&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong>{canEdit&&<button type="button" className="daily-time-edit-trigger" aria-label="퇴근 시간 수정" title="퇴근 시간 수정" onClick={()=>startEdit('checkOut')}><Pencil size={12}/></button>}</div>}</div>
           <div><span><Clock3 size={14}/> 총 근무 시간</span><strong>{hours(durationFor(record))}</strong></div>
         </div>
         <div className="daily-timeline-head"><h3>타임라인</h3><span>{timeline.length}개 기록</span></div>
