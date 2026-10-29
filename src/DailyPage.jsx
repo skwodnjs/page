@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
-import {collection,doc,onSnapshot,serverTimestamp,setDoc} from 'firebase/firestore';
+import {collection,doc,onSnapshot,serverTimestamp,setDoc,runTransaction} from 'firebase/firestore';
 import {ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,NotebookPen,Pencil,Plus,Trash2,LoaderCircle,AlertCircle,Check} from 'lucide-react';
 import {auth,db} from './firebase.js';
 import './daily.css';
@@ -45,7 +45,8 @@ const durationFor=record=>{
   return elapsed>=0?elapsed:null;
 };
 const hours=total=>total===null?'—':Math.floor(total/60)+'시간 '+pad(total%60)+'분';
-const timelineItems=record=>Array.isArray(record?.timeline)?record.timeline:[];
+const removeCategory=items=>items.map(item=>{const {category,...rest}=item;return rest});
+const timelineItems=record=>Array.isArray(record?.timeline)?removeCategory(record.timeline):[];
 const sortedTimeline=items=>[...items].sort((a,b)=>String(a.startAt).localeCompare(String(b.startAt)));
 function MonthCalendar({month,selected,onSelect,records}){
   const year=month.getFullYear(),m=month.getMonth();
@@ -80,7 +81,7 @@ function Timeline({events,onEdit}){
       <div className="daily-timeline-content">
         <div className="daily-timeline-title">
           <strong>{event.title||'제목 없음'}</strong>
-          <div className="daily-timeline-controls"><span>{event.category||'기타'}</span><button type="button" title="타임라인 수정" aria-label={event.title+' 수정'} onClick={()=>onEdit(event)}><Pencil size={13}/></button></div>
+          <div className="daily-timeline-controls"><button type="button" title="타임라인 수정" aria-label={event.title+' 수정'} onClick={()=>onEdit(event)}><Pencil size={13}/></button></div>
         </div>
         {event.note&&<p>{event.note}</p>}
       </div>
@@ -98,6 +99,7 @@ export default function DailyPage(){
   const [saveError,setSaveError]=useState('');
   const [editing,setEditing]=useState(null);
   const busyRef=useRef(false);
+  const migrationsRef=useRef(new Set());
 
   useEffect(()=>{
     const updateToday=()=>setToday(toKey(new Date()));
@@ -108,11 +110,27 @@ export default function DailyPage(){
 
   useEffect(()=>{
     if(!uid){setLoadError('인증 정보가 없습니다. 다시 로그인해 주세요.');setLoading(false);return}
-    setLoading(true);setLoadError('');
+    setLoading(true);setLoadError('');migrationsRef.current.clear();
     const unsubscribe=onSnapshot(collection(db,'users',uid,'dailyRecords'),snapshot=>{
       const next={};
       snapshot.docs.forEach(item=>{
-        if(/^\d{4}-\d{2}-\d{2}$/.test(item.id))next[item.id]=item.data();
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(item.id))return;
+        const data=item.data();
+        next[item.id]={...data,timeline:timelineItems(data)};
+        // Remove obsolete category fields already stored in Firestore, without
+        // overwriting another device's concurrent timeline edits.
+        if(Array.isArray(data.timeline)&&data.timeline.some(entry=>entry&&Object.prototype.hasOwnProperty.call(entry,'category'))&&!migrationsRef.current.has(item.id)){
+          migrationsRef.current.add(item.id);
+          const ref=doc(db,'users',uid,'dailyRecords',item.id);
+          runTransaction(db,async tx=>{
+            const latest=await tx.get(ref);
+            if(!latest.exists())return;
+            const existing=latest.data().timeline;
+            if(Array.isArray(existing)&&existing.some(entry=>entry&&Object.prototype.hasOwnProperty.call(entry,'category'))){
+              tx.update(ref,{timeline:removeCategory(existing)});
+            }
+          }).catch(error=>{console.error('기존 타임라인 분류 제거 실패',error)}).finally(()=>migrationsRef.current.delete(item.id));
+        }
       });
       setRecords(next);
       setLoading(false);
@@ -171,7 +189,7 @@ export default function DailyPage(){
   };
   const startTimelineEdit=event=>{
     setSaveError('');
-    setEditing({kind:'timeline',id:event?.id||null,title:event?.title||'',category:event?.category||'업무',note:event?.note||'',startAt:event?.startAt||selected+'T09:00',endAt:event?.endAt||selected+'T10:00',error:''});
+    setEditing({kind:'timeline',id:event?.id||null,title:event?.title||'',note:event?.note||'',startAt:event?.startAt||selected+'T09:00',endAt:event?.endAt||selected+'T10:00',error:''});
   };
   const submitEdit=async(event)=>{
     event.preventDefault();
@@ -202,7 +220,7 @@ export default function DailyPage(){
       setEditing(e=>({...e,error:'시작은 선택한 날짜, 종료는 당일 또는 다음 날로 설정하고 종료가 시작보다 늦어야 합니다.'}));return;
     }
     const id=editing.id||doc(collection(db,'users',uid,'dailyRecords')).id;
-    const item={id,title:editing.title.trim(),category:editing.category.trim()||'기타',note:editing.note.trim(),startAt:editing.startAt,endAt:editing.endAt};
+    const item={id,title:editing.title.trim(),note:editing.note.trim(),startAt:editing.startAt,endAt:editing.endAt};
     const updated=editing.id?timeline.map(x=>x.id===editing.id?item:x):[...timeline,item];
     if(await savePatch(selected,{timeline:sortedTimeline(updated)}))setEditing(null);
   };
@@ -300,10 +318,6 @@ export default function DailyPage(){
             <label>시작<input type="datetime-local" required disabled={saving} value={editing.startAt} onChange={event=>setEditing(e=>({...e,startAt:event.target.value,error:''}))}/></label>
             <label>종료<input type="datetime-local" required disabled={saving} value={editing.endAt} onChange={event=>setEditing(e=>({...e,endAt:event.target.value,error:''}))}/></label>
           </div>
-          <label className="daily-edit-label" htmlFor="daily-edit-category">분류</label>
-          <select id="daily-edit-category" value={editing.category} disabled={saving} onChange={event=>setEditing(e=>({...e,category:event.target.value}))}>
-            {['업무','연구','학습','개인','휴식','기타'].map(category=><option key={category} value={category}>{category}</option>)}
-          </select>
           <label className="daily-edit-label" htmlFor="daily-edit-note">메모</label>
           <textarea id="daily-edit-note" rows={3} disabled={saving} value={editing.note} placeholder="선택 사항" onChange={event=>setEditing(e=>({...e,note:event.target.value}))}/>
         </>}
