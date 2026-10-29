@@ -1,7 +1,7 @@
 # Page
 
-개인용 React 앱 허브: 금융 관리 · 단어/문장 · 메모.
-배포는 Cloudflare Workers, 로그인과 메모 데이터는 Firebase Authentication / Cloud Firestore를 사용합니다.
+개인용 React 앱 허브: 금융 관리 · 단어/문장 · 메모 · 일상.
+배포는 Cloudflare Workers, 로그인과 메모·일상 데이터는 Firebase Authentication / Cloud Firestore를 사용합니다.
 
 ## 설치 및 실행
 
@@ -38,7 +38,7 @@ VITE_OWNER_UID=
 3. Firebase Console > Firestore Database > Rules에 규칙을 붙여넣고 **게시(Publish)**를 누릅니다. Google 설정 단계 이전에 규칙을 게시해도 되지만, 플레이스홀더는 모든 요청을 차단하므로 관리자 UID로 치환해야 메모를 읽고 쓸 수 있습니다.
 4. 원한다면 Cloudflare 빌드 환경변수 `VITE_OWNER_UID`에도 동일 UID를 추가하면 프런트엔드에서 별도 확인이 가능합니다. **실제 권한 통제는 반드시 서버의 Firestore Rules로 수행**해야 합니다.
 
-보안 규칙은 `users/{uid}/datedNotes/{date}`와 `users/{uid}/generalNotes/{noteId}` 경로를 관리자 Firebase UID에만 허용합니다. 다른 경로는 접근 거부입니다. 공개 쓰기 규칙을 사용하지 마세요.
+보안 규칙은 `users/{uid}/datedNotes/{date}`, `users/{uid}/generalNotes/{noteId}`, `users/{uid}/dailyRecords/{date}` 경로를 관리자 Firebase UID에만 허용합니다. 다른 경로는 접근 거부입니다. 공개 쓰기 규칙을 사용하지 마세요.
 
 ## 메모 데이터
 
@@ -50,6 +50,24 @@ VITE_OWNER_UID=
 - 기존 `page-ui-dated`/`page-ui-notes`가 있으면 메모 화면에서 **기존 메모 가져오기**를 선택할 수 있습니다. UI 예시 메모가 포함되었을 수 있으므로 자동 업로드하지 않습니다.
 - 여러 기기에서 같은 메모를 동시에 편집할 경우 Firestore의 마지막 저장 내용이 우선합니다. 중요한 동시 편집에는 별도의 충돌 해결 기능이 필요합니다.
 - Firebase 설정은 공개 웹 앱 구성이고, 관리자 비밀번호는 코드/환경변수에 절대 포함하지 않습니다.
+
+## 일상 기록 (Firestore)
+
+- 문서 경로: `users/{uid}/dailyRecords/{YYYY-MM-DD}` (사용자가 로그인한 Firebase UID 아래에 날짜별로 한 문서).
+- 주요 필드: `date`, `checkIn`, `checkOut` (각 `HH:mm` 또는 `null`), `checkInAt`, `checkOutAt` (ISO timestamp string 또는 `null`), `checkoutDayOffset` (날짜 차이), `checkoutNextDay`, `timeline` (활동 배열), `updatedAt`.
+- 타임라인 항목: `id`, `title`, `category`, `note`, `startAt`, `endAt` (현지 시간 `YYYY-MM-DDTHH:mm`). 출퇴근 기록이 없는 날도 타임라인만 저장할 수 있습니다.
+- 달력·월간 합계·날짜별 기록은 Firestore 실시간 구독(`onSnapshot`)으로 동기화합니다. 출근/퇴근 버튼과 편집, 타임라인 추가/수정/삭제는 `setDoc(...,{merge:true})`로 저장합니다. 저장 완료 안내는 Firestore 작업 성공 후에만 표시됩니다.
+- **기존 UI에 포함된 출퇴근·타임라인 예시 데이터는 서버에 업로드하지 않고 제거했습니다.** 빈 Firebase 문서는 실제로 기록하기 전까지 비어 있습니다. 일상 페이지에서 `localStorage` 또는 브라우저 영구 Firestore 캐시를 사용하지 않습니다.
+- 같은 날짜의 타임라인을 여러 기기에서 동시에 수정하면 마지막으로 저장한 배열이 우선합니다. 출퇴근 필드는 병합 저장합니다.
+- **중요: Firestore 보안 규칙도 따로 업데이트해야 합니다.** 이미 실제 UID를 적용해 Firebase에 게시한 기존 규칙을 유지하면서 아래 `dailyRecords` 구문을 `match /databases/{database}/documents` 내부에 추가하고 **Firebase Console > Firestore Database > Rules > Publish**를 누르세요:
+
+```javascript
+match /users/{userId}/dailyRecords/{dateId} {
+  allow read, write: if isOwner(userId);
+}
+```
+
+저장소 `firestore.rules`에 있는 `REPLACE_WITH_OWNER_UID`는 예시 플레이스홀더입니다. **게시할 때 실제 관리자 UID로 유지/교체해야 합니다.** 기존 공개 접근 규칙으로 우회하거나 보안 검증을 제거하지 마세요.
 
 ## 아직 Firebase가 아닌 화면
 
