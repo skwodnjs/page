@@ -187,7 +187,7 @@ export default function DailyPage(){
     if(!editing)return;
     const value=editing.value;
     const date=new Date(value);
-    if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/.test(value)||Number.isNaN(date.getTime())||
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)||Number.isNaN(date.getTime())||
        toKey(date)+'T'+timeOf(date)!==value){
       setEditing(e=>({...e,error:'날짜와 시간을 정확히 입력해 주세요.'}));return;
     }
