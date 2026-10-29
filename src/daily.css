@@ -3,3 +3,28 @@
 @media(max-width:850px){.daily-main-layout{grid-template-columns:1fr}.daily-calendar-card{padding:20px}.daily-cal-day{min-height:43px;aspect-ratio:auto;height:49px}.daily-day-card{width:100%}.daily-timeline-item{grid-template-columns:93px 15px minmax(0,1fr)}}
 @media(max-width:700px){.daily-overview{gap:9px}.daily-overview>div{padding:15px 13px}.daily-overview strong{font-size:18px}.daily-overview strong small{font-size:11px;margin-left:2px;margin-right:3px}.daily-overview>div>span{font-size:11px}.daily-main-layout{gap:12px}.daily-day-head{padding:19px 18px}.daily-attendance>div{padding:15px 10px}.daily-attendance>div>span{font-size:10px;gap:4px}.daily-attendance strong{font-size:17px}.daily-attendance strong small{margin-left:4px}.daily-timeline-list{padding-inline:18px}.daily-timeline-head{padding-inline:18px}}
 @media(max-width:400px){.daily-overview>div{padding:13px 9px}.daily-overview strong{font-size:15px}.daily-overview>div>span{font-size:10px}.daily-attendance strong{font-size:15px}.daily-attendance>div>span svg{width:12px}.daily-attendance strong small{display:inline-block;font-size:9px;margin-left:0;margin-top:4px}.daily-timeline-item{grid-template-columns:72px 13px minmax(0,1fr);gap:8px}.daily-timeline-title strong{font-size:12px}.daily-cal-day{height:43px}}
+
+/* Attendance times can be edited with a double-click or the small edit control. */
+.daily-time-editable{min-width:0;min-height:30px;display:flex;align-items:center;gap:6px}
+.daily-time-editable strong{min-width:0;cursor:text}
+.daily-time-edit-trigger{flex:none;display:inline-flex;align-items:center;justify-content:center;width:21px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--tertiary);opacity:.45;cursor:pointer}
+.daily-time-edit-trigger:hover,.daily-time-edit-trigger:focus-visible{opacity:1;color:var(--text);background:var(--hover)}
+.daily-time-editable:focus-within .daily-time-edit-trigger,.daily-time-editable:hover .daily-time-edit-trigger{opacity:1}
+.daily-edit-overlay{position:fixed;inset:0;z-index:2000;background:rgba(14,18,21,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+.daily-edit-dialog{box-sizing:border-box;width:min(100%,370px);border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--text);box-shadow:0 20px 70px rgba(0,0,0,.18);padding:24px;display:flex;flex-direction:column;gap:12px}
+.daily-edit-heading span{font-size:12px;color:var(--secondary)}
+.daily-edit-heading h3{font-size:19px;margin:7px 0 12px;letter-spacing:-.5px;font-weight:650}
+.daily-edit-label{font-size:12px;color:var(--secondary);font-weight:600}
+.daily-edit-dialog input[type=datetime-local]{box-sizing:border-box;width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;color-scheme:light dark}
+:root:not([data-theme=dark]) .daily-edit-dialog input[type=datetime-local]{color-scheme:light}
+.daily-edit-hint{margin:0;color:var(--secondary);font-size:11px;line-height:1.5}
+.daily-edit-error{margin:0;color:#c55c5c;font-size:12px;line-height:1.5}
+.daily-edit-actions{margin-top:13px;display:flex;justify-content:flex-end;gap:8px;align-items:center}
+.daily-edit-actions button{font:inherit;font-size:12px;border:0;border-radius:7px;min-height:34px;padding:0 13px;cursor:pointer}
+.daily-edit-actions button.daily-edit-cancel{background:transparent;color:var(--secondary)}
+.daily-edit-actions button.daily-edit-cancel:hover{background:var(--hover);color:var(--text)}
+.daily-edit-actions button.daily-edit-save{background:var(--text);color:var(--panel);font-weight:650}
+.daily-edit-actions button.daily-edit-remove{background:transparent;color:#c55c5c;margin-right:auto;padding:0 6px}
+.daily-edit-actions button.daily-edit-remove:hover{text-decoration:underline}
+@media(hover:none){.daily-time-edit-trigger{opacity:1}}
+@media(max-width:400px){.daily-time-editable{gap:2px}.daily-time-edit-trigger{width:16px}.daily-time-edit-trigger svg{width:11px}.daily-edit-dialog{padding:20px}}
