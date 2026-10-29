@@ -91,7 +91,7 @@ const durationFor=record=>{
 };
 const hours=total=>total===null?'—':Math.floor(total/60)+'시간 '+pad(total%60)+'분';
 const formatEventTime=(time,nextDay)=>nextDay?'익일 '+time:time;
-function MonthCalendar({month,selected,onSelect,records}){
+function MonthCalendar({month,selected,onSelect}){
   const year=month.getFullYear(),m=month.getMonth();
   const count=new Date(year,m+1,0).getDate();
   const offset=new Date(year,m,1).getDay();
@@ -101,10 +101,8 @@ function MonthCalendar({month,selected,onSelect,records}){
     {dates.map((d,i)=>{
       if(d===null)return <span aria-hidden="true" key={'gap-'+i}/>;
       const key=year+'-'+pad(m+1)+'-'+pad(d);
-      const record=records[key];
-      return <button type="button" key={key} aria-label={key+' 기록 보기'} aria-pressed={selected===key} onClick={()=>onSelect(key)} className={'daily-cal-day'+(selected===key?' selected':'')+(record?' has-record':'')}>
+      return <button type="button" key={key} aria-label={key+' 기록 보기'} aria-pressed={selected===key} onClick={()=>onSelect(key)} className={'daily-cal-day'+(selected===key?' selected':'')}>
         <span>{d}</span>
-        {record&&<i className={record.checkIn?'work':'only-timeline'}/>}
       </button>;
     })}
   </div>;
@@ -163,8 +161,7 @@ export default function DailyPage(){
             <button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button>
           </div>
         </div>
-        <MonthCalendar month={month} selected={selected} onSelect={setSelected} records={RECORDS}/>
-        <div className="daily-calendar-legend"><span><i className="work"/>출퇴근 기록</span><span><i className="only-timeline"/>타임라인만 기록</span></div>
+        <MonthCalendar month={month} selected={selected} onSelect={setSelected}/>
       </section>
       <section className="daily-day-card">
         <div className="daily-day-head">
