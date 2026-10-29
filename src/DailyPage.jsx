@@ -1,8 +1,8 @@
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,NotebookPen} from 'lucide-react';
 import './daily.css';
 
-// Read-only records for the visual prototype. Editing and persistence will be added later.
+// Initial display records; attendance changes live only in React memory (no persistence).
 const RECORDS={
   '2026-10-29':{
     checkIn:'09:30',checkOut:'01:20',checkoutNextDay:true,
@@ -81,12 +81,27 @@ const RECORDS={
 const pad=n=>String(n).padStart(2,'0');
 const toKey=date=>date.getFullYear()+'-'+pad(date.getMonth()+1)+'-'+pad(date.getDate());
 const fromKey=key=>new Date(key+'T12:00:00');
+const initialRecords=()=>{
+  const today=toKey(new Date());
+  // Treat today's example attendance as unrecorded so the clock-in action is usable.
+  return {...RECORDS,[today]:{...RECORDS[today],checkIn:null,checkOut:null,checkInAt:null,checkOutAt:null,checkoutDayOffset:0,checkoutNextDay:false,timeline:RECORDS[today]?.timeline||[]}};
+};
+const offsetFromDay=(dateKey,date)=>{
+  const [year,month,day]=dateKey.split('-').map(Number);
+  return Math.round((Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())-Date.UTC(year,month-1,day))/86400000);
+};
+const timeOf=date=>pad(date.getHours())+':'+pad(date.getMinutes());
 const shiftDate=(key,days)=>{const d=fromKey(key);d.setDate(d.getDate()+days);return toKey(d)};
 const prettyDate=key=>fromKey(key).toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
 const minutes=time=>{const [h,m]=time.split(':').map(Number);return h*60+m};
 const durationFor=record=>{
   if(!record?.checkIn||!record?.checkOut)return null;
-  const duration=minutes(record.checkOut)-minutes(record.checkIn)+(record.checkoutNextDay?1440:0);
+  if(record.checkInAt&&record.checkOutAt){
+    const elapsed=Math.floor((new Date(record.checkOutAt)-new Date(record.checkInAt))/60000);
+    return elapsed>=0?elapsed:null;
+  }
+  const dayOffset=record.checkoutDayOffset??(record.checkoutNextDay?1:0);
+  const duration=minutes(record.checkOut)-minutes(record.checkIn)+dayOffset*1440;
   return duration>=0?duration:null;
 };
 const hours=total=>total===null?'—':Math.floor(total/60)+'시간 '+pad(total%60)+'분';
@@ -101,7 +116,8 @@ function MonthCalendar({month,selected,onSelect,records}){
     {dates.map((d,i)=>{
       if(d===null)return <span aria-hidden="true" key={'gap-'+i}/>;
       const key=year+'-'+pad(m+1)+'-'+pad(d);
-      const hasRecord=Boolean(records[key]);
+      const record=records[key];
+      const hasRecord=Boolean(record&&(record.checkIn||record.checkOut||record.timeline?.length));
       return <button type="button" key={key} aria-label={key+' 기록 보기'} aria-pressed={selected===key} onClick={()=>onSelect(key)} className={'daily-cal-day'+(selected===key?' selected':'')}>
         <span>{d}</span>
         {hasRecord&&<i className="work" aria-hidden="true"/>}
@@ -126,24 +142,54 @@ function Timeline({events}){
   )}</div>;
 }
 export default function DailyPage(){
-  const [selected,setSelected]=useState('2026-10-29');
+  const [today,setToday]=useState(()=>toKey(new Date()));
+  const [selected,setSelected]=useState(()=>toKey(new Date()));
+  const [records,setRecords]=useState(initialRecords);
+  useEffect(()=>{
+    const updateToday=()=>setToday(toKey(new Date()));
+    const timer=setInterval(updateToday,30000);
+    window.addEventListener('focus',updateToday);
+    return ()=>{clearInterval(timer);window.removeEventListener('focus',updateToday)};
+  },[]);
   const month=fromKey(selected);
-  const record=RECORDS[selected];
+  const record=records[selected];
+  const canCheckIn=selected===today&&!record?.checkIn;
+  const canCheckOut=Boolean(record?.checkIn&&!record?.checkOut);
+  const checkIn=()=>{
+    const now=new Date();
+    if(selected!==toKey(now))return;
+    setRecords(previous=>{
+      const existing=previous[selected]||{timeline:[]};
+      if(existing.checkIn||existing.checkOut)return previous;
+      return {...previous,[selected]:{...existing,checkIn:timeOf(now),checkInAt:now.toISOString(),checkOut:null,checkOutAt:null,checkoutDayOffset:0,checkoutNextDay:false}};
+    });
+  };
+  const checkOut=()=>{
+    const now=new Date();
+    setRecords(previous=>{
+      const existing=previous[selected];
+      if(!existing?.checkIn||existing.checkOut)return previous;
+      const dayOffset=offsetFromDay(selected,now);
+      if(dayOffset<0)return previous;
+      return {...previous,[selected]:{...existing,checkOut:timeOf(now),checkOutAt:now.toISOString(),checkoutDayOffset:dayOffset,checkoutNextDay:dayOffset===1}};
+    });
+  };
+  const checkoutOffset=record?.checkoutDayOffset??(record?.checkoutNextDay?1:0);
   const timeline=record?.timeline||[];
   const monthly=useMemo(()=>{
     const prefix=selected.slice(0,7);
-    const entries=Object.entries(RECORDS).filter(([key])=>key.startsWith(prefix));
-    const working=entries.filter(([,value])=>durationFor(value)!==null);
+    const entries=Object.entries(records).filter(([key])=>key.startsWith(prefix));
+    const working=entries.filter(([,value])=>Boolean(value.checkIn));
     return{
       worked:working.length,
-      minutes:working.reduce((sum,[,value])=>sum+durationFor(value),0),
+      minutes:working.reduce((sum,[,value])=>sum+(durationFor(value)??0),0),
       timeline:entries.reduce((sum,[,value])=>sum+(value.timeline?.length||0),0)
     };
-  },[selected]);
+  },[selected,records]);
   const moveMonth=step=>{
     const next=new Date(month.getFullYear(),month.getMonth()+step,1);
     const prefix=next.getFullYear()+'-'+pad(next.getMonth()+1);
-    const available=Object.keys(RECORDS).filter(key=>key.startsWith(prefix)).sort();
+    const available=Object.keys(records).filter(key=>key.startsWith(prefix)).sort();
     setSelected(available.at(-1)||prefix+'-01');
   };
   return <div className="daily-page">
@@ -163,7 +209,7 @@ export default function DailyPage(){
             <button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button>
           </div>
         </div>
-        <MonthCalendar month={month} selected={selected} onSelect={setSelected} records={RECORDS}/>
+        <MonthCalendar month={month} selected={selected} onSelect={setSelected} records={records}/>
       </section>
       <section className="daily-day-card">
         <div className="daily-day-head">
@@ -174,8 +220,8 @@ export default function DailyPage(){
           </div>
         </div>
         <div className="daily-attendance">
-          <div><span><LogIn size={14}/> 출근 시간</span><strong>{record?.checkIn||'—'}</strong></div>
-          <div><span><LogOut size={14}/> 퇴근 시간</span><strong>{record?.checkOut||'—'}{record?.checkoutNextDay&&<small>익일</small>}</strong></div>
+          <div><span><LogIn size={14}/> 출근 시간</span><strong>{record?.checkIn||'—'}</strong>{canCheckIn&&<button type="button" className="daily-attendance-action" onClick={checkIn}>출근하기</button>}</div>
+          <div><span><LogOut size={14}/> 퇴근 시간</span><strong>{record?.checkOut||'—'}{checkoutOffset>0&&record?.checkOut&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong>{canCheckOut&&<button type="button" className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>}</div>
           <div><span><Clock3 size={14}/> 총 근무 시간</span><strong>{hours(durationFor(record))}</strong></div>
         </div>
         <div className="daily-timeline-head"><h3>타임라인</h3><span>{timeline.length}개 기록</span></div>
