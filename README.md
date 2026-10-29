@@ -55,7 +55,7 @@ VITE_OWNER_UID=
 
 - 문서 경로: `users/{uid}/dailyRecords/{YYYY-MM-DD}` (사용자가 로그인한 Firebase UID 아래에 날짜별로 한 문서).
 - 주요 필드: `date`, `checkIn`, `checkOut` (각 `HH:mm` 또는 `null`), `checkInAt`, `checkOutAt` (ISO timestamp string 또는 `null`), `checkoutDayOffset` (날짜 차이), `checkoutNextDay`, `timeline` (활동 배열), `updatedAt`.
-- 타임라인 항목: `id`, `title`, `category`, `note`, `startAt`, `endAt` (현지 시간 `YYYY-MM-DDTHH:mm`). 출퇴근 기록이 없는 날도 타임라인만 저장할 수 있습니다.
+- 타임라인 항목: `id`, `title`, `note`, `startAt`, `endAt` (현지 시간 `YYYY-MM-DDTHH:mm`). 출퇴근 기록이 없는 날도 타임라인만 저장할 수 있습니다. 기존 Firestore 타임라인의 `category` 필드는 앱에서 불러온 뒤 트랜잭션으로 자동 제거합니다.
 - 달력·월간 합계·날짜별 기록은 Firestore 실시간 구독(`onSnapshot`)으로 동기화합니다. 출근/퇴근 버튼과 편집, 타임라인 추가/수정/삭제는 `setDoc(...,{merge:true})`로 저장합니다. 저장 완료 안내는 Firestore 작업 성공 후에만 표시됩니다.
 - **기존 UI에 포함된 출퇴근·타임라인 예시 데이터는 서버에 업로드하지 않고 제거했습니다.** 빈 Firebase 문서는 실제로 기록하기 전까지 비어 있습니다. 일상 페이지에서 `localStorage` 또는 브라우저 영구 Firestore 캐시를 사용하지 않습니다.
 - 같은 날짜의 타임라인을 여러 기기에서 동시에 수정하면 마지막으로 저장한 배열이 우선합니다. 출퇴근 필드는 병합 저장합니다.
