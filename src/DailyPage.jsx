@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {collection,doc,onSnapshot,serverTimestamp,setDoc} from 'firebase/firestore';
-import {ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,Pencil,Trash2,LoaderCircle,AlertCircle,Check,List,CalendarDays} from 'lucide-react';
+import {ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,Pencil,Trash2,LoaderCircle,AlertCircle,Check} from 'lucide-react';
 import {useCloudMemo} from './MemoPage.jsx';
 import './memo-cloud.css';
 import {auth,db} from './firebase.js';
@@ -40,7 +40,7 @@ const durationFor=record=>{
   return elapsed>=0?elapsed:null;
 };
 const hours=total=>total===null?'—':Math.floor(total/60)+'시간 '+pad(total%60)+'분';
-function MonthCalendar({month,selected,onSelect,records}){
+function MonthCalendar({month,selected,onSelect,records,dated}){
   const year=month.getFullYear(),m=month.getMonth();
   const count=new Date(year,m+1,0).getDate();
   const offset=new Date(year,m,1).getDay();
@@ -51,7 +51,7 @@ function MonthCalendar({month,selected,onSelect,records}){
       if(d===null)return <span aria-hidden="true" key={'gap-'+i}/>;
       const key=year+'-'+pad(m+1)+'-'+pad(d);
       const record=records[key];
-      const hasRecord=Boolean(record&&(record.checkInAt||record.checkOutAt));
+      const hasRecord=Boolean((record&&(record.checkInAt||record.checkOutAt))||dated[key]?.trim());
       return <button type="button" key={key} aria-label={key+' 기록 보기'} aria-pressed={selected===key} onClick={()=>onSelect(key)} className={'daily-cal-day'+(selected===key?' selected':'')}>
         <span>{d}</span>
         {hasRecord&&<i className="work" aria-hidden="true"/>}
@@ -116,8 +116,6 @@ export default function DailyPage(){
   const month=fromKey(selected);
   const record=records[selected];
   const {dated,loading:notesLoading,loadError:notesError,statuses,editDated,retry}=useCloudMemo(uid);
-  const [tab,setTab]=useState('attendance');
-  const [notesView,setNotesView]=useState('calendar');
   const canCheckIn=selected===today&&!record?.checkInAt;
   const canCheckOut=Boolean(record?.checkInAt&&!record?.checkOutAt);
   const canEdit=selected<=today;
@@ -188,7 +186,7 @@ export default function DailyPage(){
   const moveMonth=step=>{
     const next=new Date(month.getFullYear(),month.getMonth()+step,1);
     const prefix=next.getFullYear()+'-'+pad(next.getMonth()+1);
-    const available=Object.keys(records).filter(key=>key.startsWith(prefix)).sort();
+    const available=[...new Set([...Object.keys(records),...Object.keys(dated)])].filter(key=>key.startsWith(prefix)).sort();
     chooseDate(available.at(-1)||prefix+'-01');
   };
 
@@ -196,8 +194,6 @@ export default function DailyPage(){
   if(loadError||notesError)return <div className="daily-loading daily-loading-error"><AlertCircle size={17}/>{loadError||notesError}<button type="button" className="daily-attendance-action" onClick={()=>window.location.reload()}>다시 시도</button></div>;
   return <div className="daily-page">
     <div className="section-head daily-section-head"><div><div className="eyebrow">DAILY</div><h1>일상</h1></div></div>
-    <nav className="tabs" aria-label="일상 메뉴"><button type="button" className={tab==='attendance'?'selected':''} onClick={()=>setTab('attendance')}>출퇴근 기록</button><button type="button" className={tab==='notes'?'selected':''} onClick={()=>setTab('notes')}>날짜별 메모</button></nav>
-    {tab==='attendance'&&<>
     <div className="daily-topline"><div><h2>출퇴근 기록</h2><p>날짜별 출퇴근 시간</p></div>
       <div className="daily-sync-status" role="status">
         {saving?<><LoaderCircle size={14} className="memo-spin"/> 저장 중...</>:saveState==='saved'?<><Check size={14}/> 저장됨</>:null}
@@ -217,7 +213,7 @@ export default function DailyPage(){
             <button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button>
           </div>
         </div>
-        <MonthCalendar month={month} selected={selected} onSelect={chooseDate} records={records}/>
+        <MonthCalendar month={month} selected={selected} onSelect={chooseDate} records={records} dated={dated}/>
       </section>
       <section className="daily-day-card">
         <div className="daily-day-head">
@@ -232,11 +228,21 @@ export default function DailyPage(){
           <div><span><LogOut size={14}/> 퇴근 시간</span>{canCheckOut?<button type="button" disabled={saving} className="daily-attendance-action" onClick={checkOut}>퇴근하기</button>:<div className="daily-time-editable"><strong onDoubleClick={canEdit?()=>startEdit('checkOutAt'):undefined} title={canEdit?'더블클릭하여 시간 수정':undefined}>{checkOutTime?timeOf(checkOutTime):'—'}{checkoutOffset>0&&checkOutTime&&<small>{checkoutOffset===1?'익일':checkoutOffset+'일 후'}</small>}</strong>{canEdit&&<button type="button" disabled={saving} className="daily-time-edit-trigger" aria-label="퇴근 시간 수정" title="퇴근 시간 수정" onClick={()=>startEdit('checkOutAt')}><Pencil size={12}/></button>}</div>}</div>
           <div><span><Clock3 size={14}/> 총 근무 시간</span><strong>{hours(durationFor(record))}</strong></div>
         </div>
+        <div className="daily-dated-memo">
+          <div className="daily-dated-memo-head">
+            <h3>날짜별 메모</h3>
+            <span className="memo-save-status" role="status">
+              {statuses['dated:'+selected]==='error'
+                ?<button type="button" className="memo-sync-error" onClick={()=>retry('dated:'+selected)}><AlertCircle size={14}/> 저장 실패 · 재시도</button>
+                :statuses['dated:'+selected]==='pending'||statuses['dated:'+selected]==='saving'
+                  ?<><LoaderCircle size={14} className="memo-spin"/> {statuses['dated:'+selected]==='pending'?'저장 대기 중...':'저장 중...'}</>
+                  :<><Check size={14}/> 저장됨</>}
+            </span>
+          </div>
+          <textarea aria-label={prettyDate(selected)+' 메모'} placeholder="이 날짜의 메모를 입력하세요." value={dated[selected]||''} onChange={e=>editDated(selected,e.target.value)}/>
+        </div>
       </section>
     </div>
-    </>}
-    {tab==='notes'&&<><div className="page-actions"><div><h2>{notesView==='calendar'?'달력':'몰아보기'}</h2><p className="subtle">날짜별로 기록한 메모</p></div><button className="btn outline small" onClick={()=>setNotesView(notesView==='calendar'?'all':'calendar')}>{notesView==='calendar'?<List size={15}/>:<CalendarDays size={15}/>} {notesView==='calendar'?'몰아보기':'달력 보기'}</button></div>
-    {notesView==='calendar'?<><section className="daily-calendar-card"><div className="daily-calendar-head"><h3>{month.getFullYear()}년 {month.getMonth()+1}월</h3><div className="daily-nav-controls"><button type="button" onClick={()=>moveMonth(-1)} aria-label="이전 달"><ChevronLeft size={18}/></button><button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button></div></div><MonthCalendar month={month} selected={selected} onSelect={chooseDate} records={Object.fromEntries(Object.keys(dated).map(k=>[k,{checkInAt:true}]))}/></section><div className="date-editor"><div className="panelhead"><h3>{prettyDate(selected)}</h3><span className="memo-save-status" role="status">{statuses['dated:'+selected]==='error'?<button type="button" className="memo-sync-error" onClick={()=>retry('dated:'+selected)}>저장 실패 · 재시도</button>:statuses['dated:'+selected]==='pending'||statuses['dated:'+selected]==='saving'?<><LoaderCircle size={14} className="memo-spin"/> 저장 중...</>:<><Check size={14}/> 저장됨</>}</span></div><textarea placeholder="이 날짜의 메모를 입력하세요." value={dated[selected]||''} onChange={e=>editDated(selected,e.target.value)}/></div></>:<div className="all-notes">{Object.entries(dated).filter(([,content])=>content.trim()).sort(([a],[b])=>a.localeCompare(b)).map(([date,content])=><button type="button" className="dated-note" key={date} onClick={()=>{chooseDate(date);setNotesView('calendar')}}><strong>{prettyDate(date)}</strong><p>{content}</p><ChevronRight size={16}/></button>)}</div>}</>}
     {editing&&<div className="daily-edit-overlay" onMouseDown={event=>{if(!saving&&event.target===event.currentTarget)setEditing(null)}} onKeyDown={event=>{if(!saving&&event.key==='Escape')setEditing(null)}}>
       <form className="daily-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="daily-edit-title" onSubmit={submitEdit}>
         <div className="daily-edit-heading">
