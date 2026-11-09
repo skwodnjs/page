@@ -49,3 +49,11 @@
 .daily-edit-actions button.daily-edit-remove{display:inline-flex;align-items:center;gap:5px}
 .daily-edit-actions button:disabled{opacity:.5;cursor:default}
 @media(max-width:420px){.daily-edit-time-grid{grid-template-columns:1fr}.daily-topline{align-items:flex-start}.daily-sync-status{font-size:10px}}
+
+/* Dated memo shares the selected day and replaces the former timeline section. */
+.daily-dated-memo{padding:23px 22px 24px}
+.daily-dated-memo-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.daily-dated-memo-head h3{font-size:15px;font-weight:650;margin:0}
+.daily-dated-memo textarea{box-sizing:border-box;display:block;width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);padding:13px;font:inherit;font-size:13px;line-height:1.7}
+.daily-dated-memo textarea:focus{outline:2px solid var(--line);outline-offset:1px}
+@media(max-width:700px){.daily-dated-memo{padding:20px 18px}}
