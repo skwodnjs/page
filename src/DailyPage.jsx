@@ -203,6 +203,7 @@ export default function DailyPage(){
     <div className="daily-overview">
       <div><span>이번 달 출근</span><strong>{monthly.worked}<small>일</small></strong></div>
       <div><span>누적 근무 시간</span><strong>{Math.floor(monthly.minutes/60)}<small>시간</small> {pad(monthly.minutes%60)}<small>분</small></strong></div>
+      <div><span>평균 근무 시간</span><strong>{monthly.worked?Math.floor(Math.floor(monthly.minutes/monthly.worked)/60):0}<small>시간</small> {pad(monthly.worked?Math.floor(monthly.minutes/monthly.worked)%60:0)}<small>분</small></strong></div>
     </div>
     <div className="daily-main-layout">
       <section className="daily-calendar-card">
