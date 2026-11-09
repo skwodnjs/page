@@ -22,8 +22,8 @@
 .sentence-list .sentence-row:not(.sentence-row-expanded) strong{
   display:-webkit-box;
   -webkit-box-orient:vertical;
-  -webkit-line-clamp:3;
-  line-clamp:3;
+  -webkit-line-clamp:2;
+  line-clamp:2;
   overflow:hidden;
 }
 .sentence-list .sentence-row-expanded strong{
