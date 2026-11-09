@@ -16,3 +16,17 @@
 .sentence-list .sentence-field+.sentence-field p{color:var(--secondary)}
 .sentence-list .editlink{display:flex;align-items:center;gap:5px;margin:18px 0 0 auto}
 @media(max-width:600px){.sentence-list .sentence-row{padding:17px 16px;gap:10px;min-height:calc(2 * 1.75 * 13px + 34px)}.sentence-list .sentence-row strong{font-size:13px;line-height:1.75}.sentence-list .sentence-expanded{padding:16px}}
+
+
+/* Clamp collapsed sentences to three lines; expanded cards show full text. */
+.sentence-list .sentence-row:not(.sentence-row-expanded) strong{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  line-clamp:3;
+  overflow:hidden;
+}
+.sentence-list .sentence-row-expanded strong{
+  display:block;
+  overflow-wrap:anywhere;
+}
