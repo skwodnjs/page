@@ -10,6 +10,9 @@ service cloud.firestore {
         && request.auth.uid == 'REPLACE_WITH_OWNER_UID';
     }
 
+    match /users/{userId}/vocabularies/{vocabularyId} {
+      allow read, write: if isOwner(userId);
+    }
     match /users/{userId}/datedNotes/{dateId} {
       allow read, write: if isOwner(userId);
     }
