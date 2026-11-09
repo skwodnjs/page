@@ -30,3 +30,8 @@
   display:block;
   overflow-wrap:anywhere;
 }
+
+
+/* Vertically center collapsed sentence text within its fixed minimum height. */
+.sentence-list .sentence-row:not(.sentence-row-expanded){align-items:center}
+.sentence-list .sentence-row:not(.sentence-row-expanded) svg{margin-top:0}
