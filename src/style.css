@@ -6,7 +6,7 @@
 .sentence-list{display:flex;flex-direction:column;gap:12px;overflow:visible;background:transparent;border:0;border-radius:0}
 .sentence-list .entry{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .sentence-list .entry:last-child{border:1px solid var(--line)}
-.sentence-list .sentence-row{display:grid;grid-template-columns:minmax(0,1fr) 18px;gap:16px;align-items:start;padding:20px 22px}
+.sentence-list .sentence-row{display:grid;grid-template-columns:minmax(0,1fr) 18px;gap:16px;align-items:start;padding:20px 22px;min-height:calc(2 * 1.8 * 14px + 40px);box-sizing:border-box}
 .sentence-list .sentence-row strong{font-size:14px;font-weight:600;line-height:1.8;overflow-wrap:anywhere}
 .sentence-list .sentence-row svg{margin-top:5px}
 .sentence-list .sentence-expanded{border-top:1px solid var(--line);background:var(--panel);padding:19px 22px}
@@ -15,4 +15,4 @@
 .sentence-list .sentence-field p{font-size:13px;line-height:1.8;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .sentence-list .sentence-field+.sentence-field p{color:var(--secondary)}
 .sentence-list .editlink{display:flex;align-items:center;gap:5px;margin:18px 0 0 auto}
-@media(max-width:600px){.sentence-list .sentence-row{padding:17px 16px;gap:10px}.sentence-list .sentence-row strong{font-size:13px;line-height:1.75}.sentence-list .sentence-expanded{padding:16px}}
+@media(max-width:600px){.sentence-list .sentence-row{padding:17px 16px;gap:10px;min-height:calc(2 * 1.75 * 13px + 34px)}.sentence-list .sentence-row strong{font-size:13px;line-height:1.75}.sentence-list .sentence-expanded{padding:16px}}
