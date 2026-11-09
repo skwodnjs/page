@@ -1,7 +1,8 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {collection,doc,onSnapshot,serverTimestamp,setDoc} from 'firebase/firestore';
+import {ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,Pencil,Trash2,LoaderCircle,AlertCircle,Check,List,CalendarDays} from 'lucide-react';
 import {useCloudMemo} from './MemoPage.jsx';
-import {ChevronLeft,ChevronRight,Clock3,LogIn,LogOut,Pencil,LoaderCircle,AlertCircle,Check,List,CalendarDays} from 'lucide-react';
+import './memo-cloud.css';
 import {auth,db} from './firebase.js';
 import './daily.css';
 
@@ -182,7 +183,6 @@ export default function DailyPage(){
     return {
       worked:working.length,
       minutes:working.reduce((sum,[,value])=>sum+(durationFor(value)??0),0)
-      timeline:0
     };
   },[selected,records]);
   const moveMonth=step=>{
@@ -197,7 +197,12 @@ export default function DailyPage(){
   return <div className="daily-page">
     <div className="section-head daily-section-head"><div><div className="eyebrow">DAILY</div><h1>일상</h1></div></div>
     <nav className="tabs" aria-label="일상 메뉴"><button type="button" className={tab==='attendance'?'selected':''} onClick={()=>setTab('attendance')}>출퇴근 기록</button><button type="button" className={tab==='notes'?'selected':''} onClick={()=>setTab('notes')}>날짜별 메모</button></nav>
-    {tab==='attendance'&&<><div className="daily-topline"><div><h2>출퇴근 기록</h2><p>날짜별 출퇴근 시간</p></div><div className="daily-sync-status" role="status">{saving?<><LoaderCircle size={14} className="memo-spin"/> 저장 중...</>:saveState==='saved'?<><Check size={14}/> 저장됨</>:null}</div></div>
+    {tab==='attendance'&&<>
+    <div className="daily-topline"><div><h2>출퇴근 기록</h2><p>날짜별 출퇴근 시간</p></div>
+      <div className="daily-sync-status" role="status">
+        {saving?<><LoaderCircle size={14} className="memo-spin"/> 저장 중...</>:saveState==='saved'?<><Check size={14}/> 저장됨</>:null}
+      </div>
+    </div>
     {saveError&&<div className="daily-save-error" role="alert"><AlertCircle size={15}/>{saveError}</div>}
     <div className="daily-overview">
       <div><span>이번 달 출근</span><strong>{monthly.worked}<small>일</small></strong></div>
@@ -230,7 +235,21 @@ export default function DailyPage(){
       </section>
     </div>
     </>}
-    {tab==='notes'&&<><div className="page-actions"><div><h2>{notesView==='calendar'?'달력':'몰아보기'}</h2><p className="subtle">날짜별로 기록한 메모</p></div><button className="btn outline small" onClick={()=>setNotesView(notesView==='calendar'?'all':'calendar')}>{notesView==='calendar'?<List size={15}/>:<CalendarDays size={15}/>} {notesView==='calendar'?'몰아보기':'달력 보기'}</button></div>{notesView==='calendar'?<><section className="daily-calendar-card"><div className="daily-calendar-head"><h3>{month.getFullYear()}년 {month.getMonth()+1}월</h3><div className="daily-nav-controls"><button type="button" onClick={()=>moveMonth(-1)} aria-label="이전 달"><ChevronLeft size={18}/></button><button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button></div></div><MonthCalendar month={month} selected={selected} onSelect={chooseDate} records={Object.fromEntries(Object.keys(dated).map(k=>[k,{checkInAt:true}]))}/></section><div className="date-editor"><div className="panelhead"><h3>{prettyDate(selected)}</h3><span className="memo-save-status" role="status">{statuses['dated:'+selected]==='error'?<button className="memo-sync-error" onClick={()=>retry('dated:'+selected)}>저장 실패 · 재시도</button>:statuses['dated:'+selected]==='pending'||statuses['dated:'+selected]==='saving'?<><LoaderCircle size={14} className="memo-spin"/> 저장 중...</>
+    {tab==='notes'&&<><div className="page-actions"><div><h2>{notesView==='calendar'?'달력':'몰아보기'}</h2><p className="subtle">날짜별로 기록한 메모</p></div><button className="btn outline small" onClick={()=>setNotesView(notesView==='calendar'?'all':'calendar')}>{notesView==='calendar'?<List size={15}/>:<CalendarDays size={15}/>} {notesView==='calendar'?'몰아보기':'달력 보기'}</button></div>
+    {notesView==='calendar'?<><section className="daily-calendar-card"><div className="daily-calendar-head"><h3>{month.getFullYear()}년 {month.getMonth()+1}월</h3><div className="daily-nav-controls"><button type="button" onClick={()=>moveMonth(-1)} aria-label="이전 달"><ChevronLeft size={18}/></button><button type="button" onClick={()=>moveMonth(1)} aria-label="다음 달"><ChevronRight size={18}/></button></div></div><MonthCalendar month={month} selected={selected} onSelect={chooseDate} records={Object.fromEntries(Object.keys(dated).map(k=>[k,{checkInAt:true}]))}/></section><div className="date-editor"><div className="panelhead"><h3>{prettyDate(selected)}</h3><span className="memo-save-status" role="status">{statuses['dated:'+selected]==='error'?<button type="button" className="memo-sync-error" onClick={()=>retry('dated:'+selected)}>저장 실패 · 재시도</button>:statuses['dated:'+selected]==='pending'||statuses['dated:'+selected]==='saving'?<><LoaderCircle size={14} className="memo-spin"/> 저장 중...</>:<><Check size={14}/> 저장됨</>}</span></div><textarea placeholder="이 날짜의 메모를 입력하세요." value={dated[selected]||''} onChange={e=>editDated(selected,e.target.value)}/></div></>:<div className="all-notes">{Object.entries(dated).filter(([,content])=>content.trim()).sort(([a],[b])=>a.localeCompare(b)).map(([date,content])=><button type="button" className="dated-note" key={date} onClick={()=>{chooseDate(date);setNotesView('calendar')}}><strong>{prettyDate(date)}</strong><p>{content}</p><ChevronRight size={16}/></button>)}</div>}</>}
+    {editing&&<div className="daily-edit-overlay" onMouseDown={event=>{if(!saving&&event.target===event.currentTarget)setEditing(null)}} onKeyDown={event=>{if(!saving&&event.key==='Escape')setEditing(null)}}>
+      <form className="daily-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="daily-edit-title" onSubmit={submitEdit}>
+        <div className="daily-edit-heading">
+          <span>{prettyDate(selected)}</span>
+          <h3 id="daily-edit-title">{(editing.field==='checkInAt'?'출근':'퇴근')+' 시간 '+(record?.[editing.field]?'수정':'입력')}</h3>
+        </div>
+        <>
+          <label className="daily-edit-label" htmlFor="daily-edit-time">날짜 및 시간</label>
+          <input id="daily-edit-time" type="datetime-local" required autoFocus disabled={saving} value={editing.value}
+            min={selected+'T00:00'} max={(editing.field==='checkInAt'?selected:shiftDate(selected,1))+'T23:59'}
+            onChange={event=>setEditing(e=>({...e,value:event.target.value,error:''}))}/>
+          {editing.field==='checkOutAt'&&<p className="daily-edit-hint">다음 날 퇴근한 경우 날짜를 다음 날로 선택하세요.</p>}
+        </>
         {editing.error&&<p className="daily-edit-error" role="alert">{editing.error}</p>}
         <div className="daily-edit-actions">
           {Boolean(record?.[editing.field])&&<button type="button" disabled={saving} className="daily-edit-remove" onClick={clearEdit}><Trash2 size={13}/> 삭제</button>}
